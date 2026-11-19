@@ -186,14 +186,14 @@ class OE{constructor(mc=2,b=.04){this.mc=mc;this.b=b;this.x=null;this.dx=new THR
   this.x.lerp(v,this.a(this.mc+this.b*this.dx.length(),dt));return this.x.clone()}
  reset(){this.x=null}}
 /* ===== Aura quanh tay + vệt chém ===== */
-const TYPECOL=[[.22,.74,.97],[.96,.45,.71],[1,.82,.25]],TRAIL_MS=220;
+const TYPECOL=[[.70,.23,.19],[.31,.42,.29],[.50,.65,.63]],TRAIL_MS=220;
 const AM=(c,o)=>new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:o,blending:THREE.AdditiveBlending,depthWrite:false});
 const IDX=(()=>{const a=[];for(let i=0;i<23;i++)a.push(2*i,2*i+1,2*i+2,2*i+1,2*i+3,2*i+2);return new Uint16Array(a)})();
 function mkRib(){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(144),3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(144),3));g.setIndex(new THREE.BufferAttribute(IDX,1));
  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));m.frustumCulled=false;m.visible=false;S.add(m);return m}
-const sabers=[0x38bdf8,0xf472b6].map(col=>{
- const g=new THREE.Group(),core=new THREE.Mesh(new THREE.SphereGeometry(.04,16,16),AM(0xffffff,.9)),glow=new THREE.Mesh(new THREE.SphereGeometry(.1,20,20),AM(col,.35)),halo=new THREE.Mesh(new THREE.SphereGeometry(.16,20,20),AM(col,.14)),
-  ring=new THREE.Mesh(new THREE.TorusGeometry(.14,.007,8,40),AM(col,.85)),ring2=new THREE.Mesh(new THREE.TorusGeometry(.12,.006,8,40),AM(col,.6));ring2.rotation.x=Math.PI/2;
+const sabers=[0xB23A30,0x7FA6A0].map(col=>{
+ const g=new THREE.Group(),core=new THREE.Mesh(new THREE.SphereGeometry(.035,16,16),AM(0xffffff,.9)),glow=new THREE.Mesh(new THREE.SphereGeometry(.07,20,20),AM(col,.3)),halo=new THREE.Mesh(new THREE.SphereGeometry(.11,20,20),AM(col,.1)),
+  ring=new THREE.Mesh(new THREE.TorusGeometry(.1,.006,8,40),AM(col,.85)),ring2=new THREE.Mesh(new THREE.TorusGeometry(.085,.005,8,40),AM(col,.6));ring2.rotation.x=Math.PI/2;
  g.add(core,glow,halo,ring,ring2);g.visible=false;S.add(g);
  return{g,ring,ring2,glow,halo,col,p0:new THREE.Vector2(),p1:new THREE.Vector2(),v:new THREE.Vector2(),on:false,lost:0,tt:0,size:60,chop:false,q:0,type:2,trail:[],r1:mkRib(),r2:mkRib(),f0:new OE(),f1:new OE()}});
 function rib(s){const t=s.trail,n=Math.min(t.length,24),c0=TYPECOL[s.type];
@@ -342,7 +342,7 @@ let tornTotal=0;const hitTotal=()=>total-tornTotal;
 function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000||0);last=now;
  if(!rvfc)trackHands();updateSabers(dt,now);
  if(state==='play'){g+=dt;
-  $('msg').textContent=g<0?(g<-1?'SẴN SÀNG…':'BẮT ĐẦU!'):'';
+  $('msg').textContent=g<0?(g<-1?'Sẵn sàng…':'Bắt đầu!'):'';
   while(queue.length&&queue[0].at<=g)spawn(queue.shift());
   const cand=[];for(const o of [...objs]){const u=(g-o.sp)/o.T;o.m.position.lerpVectors(o.a,o.b,Math.min(u,1.0));o.m.position.y=o.a.y+(o.b.y-o.a.y)*Math.pow(Math.min(u,1),1.8);o.m.rotation.set(Math.sin(g*2+o.ph)*.3,Math.sin(g*1.5+o.ph)*.5,Math.sin(g*3+o.ph)*.4);
    if(u>=1){S.remove(o.m);objs.splice(objs.indexOf(o),1);if(!o.torn){pop(W/2,H*.62,'Bỏ lỡ','−1 mạng','#B23A30');sfx(120,'sawtooth',.3);loseLife()}continue}
@@ -350,7 +350,7 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
    const v=o.m.position.clone().project(C),sp=new THREE.Vector2((v.x+1)/2*W,(1-v.y)/2*H),r=.6*(H/2)/(Math.tan(C.fov*Math.PI/360)*-o.m.position.z)+14;
    if(!sabers.some(s=>hitTrail(s,sp,r)))continue;cand.push({o,sp,u});}
   cd-=dt;if(cd<=0&&cand.length){const{o,sp,u}=cand.reduce((a,b)=>b.u>a.u?b:a);cd=.25;S.remove(o.m);objs.splice(objs.indexOf(o),1);
-   if(o.torn){score+=PEN[o.kind];burst(o.m.position,0xff5522,70,3.5);sfx(60,'sawtooth',.5,.3);pop(sp.x,sp.y,'Vật rách','−'+Math.abs(PEN[o.kind])+' điểm, −1 mạng','#B23A30');loseLife()}
+   if(o.torn){score+=PEN[o.kind];burst(o.m.position,0xB23A30,70,3.5);sfx(60,'sawtooth',.5,.3);pop(sp.x,sp.y,'Vật rách','−'+Math.abs(PEN[o.kind])+' điểm, −1 mạng','#B23A30');loseLife()}
    else{const tl=o.T*(1-u),i=tl<=.6?0:tl<=1?1:tl<=1.5?2:3,p=PTS[o.kind][i];score+=p;hit++;
     burst(o.m.position,new THREE.Color(RT[i][1]),26);sfx(72+i*-3+ri(0,4)*2,'square',.12);pop(sp.x,sp.y,RT[i][0],'+'+p+' điểm, còn '+tl.toFixed(1)+' giây',RT[i][1])}
   }
