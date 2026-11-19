@@ -9,9 +9,9 @@
 html,body{margin:0;height:100%;overflow:hidden;background:var(--ink);color:var(--paper);font-family:var(--sans)}
 #cam{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);filter:brightness(.42) saturate(.7)}
 #gl{position:fixed;inset:0}#gl canvas{display:block}
-.screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:rgba(16,24,21,.82);z-index:5;overflow:auto}
+.screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px;background:rgba(16,24,21,.82);z-index:5;overflow:auto}
 .screen.on{display:flex}
-.sheet{position:relative;width:min(720px,100%);background-color:var(--paper);background-image:linear-gradient(90deg,transparent 0 43px,rgba(178,58,48,.18) 43px 44px,transparent 44px),repeating-linear-gradient(0deg,transparent 0 31px,rgba(38,48,43,.055) 31px 32px);color:var(--graphite);border:1px solid rgba(38,48,43,.28);border-radius:3px;box-shadow:0 24px 60px rgba(5,10,7,.45);padding:clamp(22px,4vw,44px);text-align:left}
+.sheet{position:relative;width:min(720px,100%);margin:auto;background-color:var(--paper);background-image:linear-gradient(90deg,transparent 0 43px,rgba(178,58,48,.18) 43px 44px,transparent 44px),repeating-linear-gradient(0deg,transparent 0 31px,rgba(38,48,43,.055) 31px 32px);color:var(--graphite);border:1px solid rgba(38,48,43,.28);border-radius:3px;box-shadow:0 24px 60px rgba(5,10,7,.45);padding:clamp(22px,4vw,44px);text-align:left}
 #menu .sheet{animation:sheet-in .45s ease-out both}
 @keyframes sheet-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .kicker{font-family:var(--sans);font-size:.78rem;font-weight:600;color:var(--moss);margin:0 0 8px}
@@ -22,7 +22,6 @@ h1.title{font-family:var(--serif);font-weight:700;font-size:var(--fs-display);li
 .intro{font-size:var(--fs-body);line-height:1.55;margin:18px 0 14px;max-width:56ch}
 .choose{font-size:var(--fs-small);font-weight:600;color:var(--moss);margin:0 0 6px}
 .levels{display:flex;flex-direction:column;border-top:1px solid rgba(38,48,43,.25)}
-.levels>button{display:block;width:100%;margin-top:8px;text-align:left}
 .level{display:grid;grid-template-columns:2.2rem minmax(0,1fr) auto;gap:2px 14px;align-items:center;width:100%;margin:0;padding:12px 6px;border:0;border-bottom:1px solid rgba(38,48,43,.18);border-radius:0;background:transparent;color:var(--graphite);font-family:var(--sans);text-align:left;cursor:pointer;transition:background .15s}
 .level:hover{background:rgba(178,58,48,.07)}
 .level .num{font-family:var(--serif);font-size:1.05rem;font-weight:600;color:var(--red);font-variant-numeric:tabular-nums}
@@ -43,7 +42,7 @@ button.primary:hover{background:#963027;border-color:#963027;color:var(--paper)}
 .score-list strong{font-weight:600}
 .fine{font-size:.75rem;color:#4E5A53;margin:8px 0 0}
 #secret{display:none;margin-top:16px;border-top:1px dashed rgba(178,58,48,.45);padding-top:14px}
-#secret button{min-width:0;padding:9px 16px;font-size:.9rem;border-color:var(--red);color:var(--red)}
+#secret button{min-width:0;margin-bottom:10px;padding:9px 16px;font-size:.9rem;border-color:var(--red);color:var(--red)}
 #secret button:hover{background:var(--red);color:var(--paper)}
 #secret label{display:block;font-size:var(--fs-small);color:var(--moss)}
 #secret input{display:block;max-width:100%;margin-top:6px;font:inherit;font-size:.78rem}
@@ -59,8 +58,8 @@ button.primary:hover{background:#963027;border-color:#963027;color:var(--paper)}
 .pop small{display:block;font-size:11px;color:#4E5A53;margin-top:1px}
 @keyframes tag-up{0%{opacity:0;transform:translate(-50%,-35%)}15%{opacity:1;transform:translate(-50%,-50%)}100%{opacity:0;transform:translate(-50%,-95%)}}
 #flash{position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 46%,rgba(178,58,48,.85) 100%);opacity:0;pointer-events:none;z-index:3;transition:opacity .35s}
-#status{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:9;max-width:min(360px,calc(100vw - 110px));padding:8px 10px;background:rgba(16,24,21,.9);color:var(--paper);border-left:3px solid var(--chalk);border-radius:2px;font-size:12px;line-height:1.45}
-#status.error{border-left-color:var(--red)}
+#status{margin:12px 0 14px;padding:8px 10px;background:rgba(38,48,43,.06);color:#3B443E;border-left:3px solid var(--chalk);border-radius:2px;font-size:12px;line-height:1.45}
+#status.error{background:rgba(178,58,48,.07);border-left-color:var(--red);color:var(--graphite)}
 #mode{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:9;padding:4px 8px;background:rgba(16,24,21,.9);color:var(--paper);border:1px solid rgba(243,236,217,.3);border-radius:2px;font-size:11px;font-weight:600}
 #mode[hidden]{display:none}
 .result{text-align:center}
@@ -75,7 +74,7 @@ button.primary:hover{background:#963027;border-color:#963027;color:var(--paper)}
 :focus-visible{outline:3px solid var(--red);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 @media (max-width:560px){.screen{padding:12px}.sheet{padding:22px 18px}.level{grid-template-columns:2rem minmax(0,1fr)}.level .meta{grid-column:2;text-align:left;display:flex;gap:12px;margin-top:3px}.level .meta span{display:inline}.result-grid{grid-template-columns:1fr;gap:10px}.actions button{flex:1 1 160px}}
-@media (max-height:560px){.screen{padding:8px}.sheet{padding:14px 20px}.kicker{display:none}.title{font-size:clamp(1.8rem,6vw,2.5rem)}.subtitle{margin-top:4px;font-size:.9rem}.intro{margin:8px 0 10px;font-size:.85rem;line-height:1.35}.choose{margin-bottom:2px}.level{padding:7px 4px}.level strong{font-size:1.1rem}.level small{font-size:.75rem}.guide{margin-top:8px}.guide summary{padding:7px 0}.result-grid{margin:12px 0;padding:10px 0}.result h1{font-size:1.35rem}}
+@media (max-height:560px){.screen{padding:8px}.sheet{margin:0 auto;padding:14px 20px}.kicker{display:none}.title{font-size:clamp(1.8rem,6vw,2.5rem)}.subtitle{margin-top:4px;font-size:.9rem}.intro{margin:8px 0 10px;font-size:.85rem;line-height:1.35}.choose{margin-bottom:2px}.level{padding:7px 4px}.level strong{font-size:1.1rem}.level small{font-size:.75rem}.guide{margin-top:8px}.guide summary{padding:7px 0}.result-grid{margin:12px 0;padding:10px 0}.result h1{font-size:1.35rem}}
 </style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet"></head><body>
 <video id="cam" playsinline muted></video><div id="gl"></div><div id="flash"></div>
 <div id="hud" aria-label="Thông tin ván chơi">
@@ -84,22 +83,52 @@ button.primary:hover{background:#963027;border-color:#963027;color:var(--paper)}
   <div class="hud-item"><span class="hud-label">Mạng</span><span class="hud-value" id="hl"></span></div>
 </div>
 <div id="msg" aria-live="polite"></div>
-<div id="status" role="status">Đang khởi động camera…</div>
-<div id="mode" hidden>Chuột</div>
+<div id="mode" hidden aria-label="Đang điều khiển bằng chuột">Chuột</div>
 
 <div id="menu" class="screen on">
   <section class="sheet">
     <p class="kicker">Slice Up Subjects</p>
     <h1 class="title">Chém môn học<svg class="pen-line" viewBox="0 0 600 30" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M6 21C74 9 151 26 235 15S405 7 594 19"/></svg></h1>
     <p class="subtitle">Trò chơi phản xạ với camera</p>
-    <p class="intro">Vung tay thật nhanh để chém (chéo, dọc, ngang). Đứng yên thì không chém được. Tránh các vật bị rách. Không có camera? Dùng chuột.</p>
-    <div class="levels">
-      <button data-lv="easy">Dễ (1:00 · 10 mạng)</button>
-      <button data-lv="medium">Trung bình (1:30 · 5 mạng)</button>
-      <button data-lv="hard">Tedious (2:30 · 3 mạng)</button>
+    <p class="intro">Vung tay thật nhanh để chém vật sáng. Đứng yên thì không chém được. Vật rách sẽ trừ điểm và mất một mạng. Không có camera? Chơi bằng chuột.</p>
+    <div id="status" role="status">Đang khởi động camera…</div>
+    <p class="choose">Chọn độ khó để bắt đầu.</p>
+    <div class="levels" role="group" aria-label="Chọn độ khó">
+      <button class="level" data-lv="easy" aria-label="Chơi mức Dễ, 1 phút, 10 mạng">
+        <span class="num">01</span>
+        <span><strong>Dễ</strong><small>Nhịp chậm, làm quen tay</small></span>
+        <span class="meta"><span>1:00</span><span>10 mạng</span></span>
+      </button>
+      <button class="level" data-lv="medium" aria-label="Chơi mức Vừa, 1 phút 30 giây, 5 mạng">
+        <span class="num">02</span>
+        <span><strong>Vừa</strong><small>Nhanh dần, ít mạng hơn</small></span>
+        <span class="meta"><span>1:30</span><span>5 mạng</span></span>
+      </button>
+      <button class="level" data-lv="hard" aria-label="Chơi mức Khó, 2 phút 30 giây, 3 mạng">
+        <span class="num">03</span>
+        <span><strong>Khó</strong><small>Nhịp nhanh, ít mạng</small></span>
+        <span class="meta"><span>2:30</span><span>3 mạng</span></span>
+      </button>
     </div>
-    <div id="secret" style="display:none"><button data-lv="secret">🤫 Chế độ bí mật</button><br><br>
-      <label>Ảnh người (tuỳ chọn): <input type="file" id="ppl" accept="image/*" multiple></label></div>
+    <details class="guide">
+      <summary>Cách tính điểm</summary>
+      <div class="guide-body">
+        <p>Chỉ chém được khi vật sáng rõ. Chém càng nhanh, điểm càng cao:</p>
+        <ul class="score-list">
+          <li><strong>Xuất sắc</strong> dưới 0,6 giây</li>
+          <li><strong>Tốt</strong> từ 0,6 đến 1 giây</li>
+          <li><strong>Được</strong> từ 1 đến 1,5 giây</li>
+          <li><strong>Chậm</strong> trên 1,5 giây</li>
+        </ul>
+        <p class="fine">Vật rách trừ điểm và mất một mạng. Độ chính xác tính trên các vật không rách.</p>
+      </div>
+    </details>
+    <div id="secret">
+      <button data-lv="secret">Chơi chế độ bí mật</button>
+      <label for="ppl">Ảnh người (tuỳ chọn)</label>
+      <input type="file" id="ppl" accept="image/*" multiple>
+      <p class="fine">Ảnh chỉ xử lý trên máy này, không tải lên.</p>
+    </div>
   </section>
 </div>
 <div id="end" class="screen"><h1 id="et"></h1><div id="es" style="font-size:26px;line-height:1.6"></div>
@@ -172,17 +201,23 @@ function updateSabers(dt,now){sabers.forEach(s=>{
  s.ring.rotation.z+=dt*4;s.ring2.rotation.y+=dt*5;rib(s)})}
 function hitTrail(s,sp,r){const t=s.trail;for(let i=1;i<t.length;i++)if(segDist(sp,t[i-1].p,t[i].p)<r)return true;return false}
 /* ===== Hand tracking (MediaPipe) ===== */
-let hl=null,pl=null,mouse=false,rvfc=false,pc=0,AR=[],SH=[],SW=160;
+let hl=null,pl=null,mouse=false,rvfc=false,pc=0,AR=[],SH=[],SW=160,gotCam=false;
 async function initTracking(){
  try{
-  video.srcObject=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:960},height:{ideal:540},frameRate:{ideal:60,min:30}}});await video.play();
+  video.srcObject=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:960},height:{ideal:540},frameRate:{ideal:60,min:30}}});await video.play();gotCam=true;
   const {HandLandmarker,PoseLandmarker,FilesetResolver}=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm');
   const fs=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
   hl=await HandLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.4,minHandPresenceConfidence:.4,minTrackingConfidence:.4});
   try{pl=await PoseLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',delegate:'GPU'},runningMode:'VIDEO',numPoses:1,minPoseDetectionConfidence:.4,minPosePresenceConfidence:.4,minTrackingConfidence:.4})}catch(e){console.warn('pose',e)}
   if(video.requestVideoFrameCallback){rvfc=true;const cb=()=>{trackHands();video.requestVideoFrameCallback(cb)};video.requestVideoFrameCallback(cb)}
-  $('status').textContent='Camera sẵn sàng ✓';setTimeout(()=>$('status').remove(),3000);
- }catch(e){mouse=true;$('status').textContent='Không dùng được camera/hand-tracking → chế độ chuột ('+e.message+')'}}
+  $('status').textContent='Camera sẵn sàng';setTimeout(()=>$('status').remove(),3000);
+ }catch(e){mouse=true;$('mode').hidden=false;const st=$('status');st.classList.add('error');
+  const msg=gotCam?'Không tải được bộ nhận diện tay. Kiểm tra kết nối mạng rồi tải lại.':
+   (e.name==='NotAllowedError'||e.name==='SecurityError')?'Camera bị chặn. Cho phép quyền camera trên thanh địa chỉ rồi tải lại.':
+   (e.name==='NotFoundError'||e.name==='DevicesNotFoundError')?'Không tìm thấy camera. Cắm webcam hoặc kiểm tra kết nối rồi tải lại.':
+   (e.name==='NotReadableError'||e.name==='TrackStartError')?'Camera đang bị ứng dụng khác chiếm. Đóng ứng dụng đó rồi tải lại.':
+   'Không mở được camera. Kiểm tra quyền truy cập rồi tải lại.';
+  st.textContent=msg+' Đang chơi bằng chuột.'}}
 addEventListener('mousemove',e=>{if(!mouse)return;const s=sabers[0],n=new THREE.Vector2(e.clientX,e.clientY),t=performance.now();if(s.on)s.v.copy(n).sub(s.p0).divideScalar(Math.max(.008,(t-s.tt)/1000));s.p0.copy(n);s.tt=t;s.size=60;s.on=true;s.lost=0});
 let lastVT=-1,lastT=0;const V2=THREE.Vector2;
 function trackHands(){
