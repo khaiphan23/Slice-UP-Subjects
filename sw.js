@@ -1,7 +1,10 @@
 const scope = self.registration.scope;
 const cachePrefix = `slice-up:${scope}:`;
-const cacheName = `${cachePrefix}v3`;
-const shell = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
+const cacheName = `${cachePrefix}v4`;
+const shell = [
+  './', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png',
+  './icon-512.png', './tracking-models.js', './tracking-worker.js'
+];
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
