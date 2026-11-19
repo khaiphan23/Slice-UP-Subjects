@@ -8,7 +8,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--ink);color:var(--paper);font-family:var(--sans)}
 #cam{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);filter:brightness(.42) saturate(.7)}
-#gl{position:fixed;inset:0}#gl canvas{display:block}
+#gl{position:fixed;inset:0}#gl canvas{display:block;width:100%;height:100%}
 .screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px;background:rgba(16,24,21,.82);z-index:5;overflow:auto}
 .screen.on{display:flex}
 .sheet{position:relative;width:min(720px,100%);margin:auto;background-color:var(--paper);background-image:linear-gradient(90deg,transparent 0 43px,rgba(178,58,48,.18) 43px 44px,transparent 44px),repeating-linear-gradient(0deg,transparent 0 31px,rgba(38,48,43,.055) 31px 32px);color:var(--graphite);border:1px solid rgba(38,48,43,.28);border-radius:3px;box-shadow:0 24px 60px rgba(5,10,7,.45);padding:clamp(22px,4vw,44px);text-align:left}
@@ -61,6 +61,7 @@ button.primary:hover{background:#963027;border-color:#963027;color:var(--paper)}
 #flash{position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 46%,rgba(178,58,48,.85) 100%);opacity:0;pointer-events:none;z-index:3;transition:opacity .35s}
 #status{margin:12px 0 14px;padding:8px 10px;background:rgba(38,48,43,.06);color:#3B443E;border-left:3px solid var(--chalk);border-radius:2px;font-size:12px;line-height:1.45}
 #status.error{background:rgba(178,58,48,.07);border-left-color:var(--red);color:var(--graphite)}
+#status:empty{display:none}
 #mode{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:9;padding:4px 8px;background:rgba(16,24,21,.9);color:var(--paper);border:1px solid rgba(243,236,217,.3);border-radius:2px;font-size:11px;font-weight:600}
 #mode[hidden]{display:none}
 .result{text-align:center}
@@ -172,8 +173,14 @@ const SUBJ=[['Toán','#2563eb'],['Vật lí','#7c3aed'],['Hoá học','#059669']
 
 /* ===== Three.js ===== */
 const R=new THREE.WebGLRenderer({alpha:true,antialias:true});R.setClearColor(0,0);$('gl').appendChild(R.domElement);
-const S=new THREE.Scene(),C=new THREE.PerspectiveCamera(60,1,.05,100);let W,H;
-function rs(){W=innerWidth;H=innerHeight;R.setSize(W,H);R.setPixelRatio(Math.min(devicePixelRatio,2));C.aspect=W/H;C.updateProjectionMatrix()}
+const S=new THREE.Scene(),C=new THREE.PerspectiveCamera(60,1,.05,100);let W,H,frameId=0;
+function scheduleFrame(){if(!frameId)frameId=requestAnimationFrame(frame)}
+function rs(){
+ W=innerWidth;H=innerHeight;
+ const pixelRatio=Math.min(devicePixelRatio,1.25,Math.sqrt(2_100_000/(W*H)));
+ R.setDrawingBufferSize(W,H,pixelRatio);
+ C.aspect=W/H;C.updateProjectionMatrix();scheduleFrame();
+}
 addEventListener('resize',rs);rs();
 const video=$('cam');
 function toScreen(l){const vw=video.videoWidth||640,vh=video.videoHeight||480,s=Math.max(W/vw,H/vh);
@@ -215,32 +222,66 @@ function updateSabers(dt,now){sabers.forEach(s=>{
  s.g.visible=true;s.g.position.copy(w);s.g.scale.setScalar(k);
  [s.glow,s.halo,s.ring,s.ring2].forEach(m=>m.material.color.setRGB(c[0],c[1],c[2]));
  s.ring.rotation.z+=dt*4;s.ring2.rotation.y+=dt*5;rib(s)})}
-function hitTrail(s,sp,r){const t=s.trail;for(let i=1;i<t.length;i++)if(segDist(sp,t[i-1].p,t[i].p)<r)return true;return false}
+function hitTrail(s,sp,r){
+ if(!s.on)return false;
+ const t=s.trail,rSquared=r*r;
+ for(let i=1;i<t.length;i++){
+  const a=t[i-1].p,b=t[i].p,dx=b.x-a.x,dy=b.y-a.y;
+  const px=sp.x-a.x,py=sp.y-a.y;
+  const fraction=Math.max(0,Math.min(1,(px*dx+py*dy)/(dx*dx+dy*dy||1)));
+  if((px-fraction*dx)**2+(py-fraction*dy)**2<rSquared)return true;
+ }
+ return false;
+}
 /* ===== Hand tracking (MediaPipe) ===== */
-let hl=null,pl=null,mouse=false,rvfc=false,pc=0,AR=[],SH=[],SW=160,gotCam=false;
+const HAND_INTERVAL=1000/30,POSE_INTERVAL=1000/12;
+let hl=null,pl=null,mouse=false,nextHandAt=0,nextPoseAt=0,AR=[],SH=[],SW=160,gotCam=false,lastVT=-1,lastT=0;
+function resetSabers(){
+ for(const s of sabers){
+  s.on=false;s.chop=false;s.q=0;s.trail.length=0;s.v.set(0,0);
+  s.g.visible=false;s.r1.visible=false;s.r2.visible=false;
+ }
+ AR=[];SH=[];SW=160;lastVT=-1;lastT=0;nextHandAt=0;nextPoseAt=0;
+}
+function useMouse(error){
+ video.srcObject?.getTracks().forEach(track=>track.stop());
+ video.srcObject=null;
+ hl?.close();pl?.close();hl=null;pl=null;
+ resetSabers();mouse=true;
+ $('mode').hidden=false;
+ const st=$('status');
+ if(st){
+  st.classList.add('error');
+  const msg=gotCam?'Không tải được bộ nhận diện tay. Kiểm tra kết nối mạng rồi tải lại.':
+   (error?.name==='NotAllowedError'||error?.name==='SecurityError')?'Camera bị chặn. Cho phép quyền camera trên thanh địa chỉ rồi tải lại.':
+   (error?.name==='NotFoundError'||error?.name==='DevicesNotFoundError')?'Không tìm thấy camera. Cắm webcam hoặc kiểm tra kết nối rồi tải lại.':
+   (error?.name==='NotReadableError'||error?.name==='TrackStartError')?'Camera đang bị ứng dụng khác chiếm. Đóng ứng dụng đó rồi tải lại.':
+   'Không mở được camera. Kiểm tra quyền truy cập rồi tải lại.';
+  st.textContent=msg+' Đang chơi bằng chuột.';
+ }
+}
 async function initTracking(){
  try{
-  video.srcObject=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:960},height:{ideal:540},frameRate:{ideal:60,min:30}}});await video.play();gotCam=true;
+  video.srcObject=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:360},frameRate:{ideal:30,max:30}}});await video.play();gotCam=true;
   const {HandLandmarker,PoseLandmarker,FilesetResolver}=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm');
   const fs=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
   hl=await HandLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.4,minHandPresenceConfidence:.4,minTrackingConfidence:.4});
   try{pl=await PoseLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',delegate:'GPU'},runningMode:'VIDEO',numPoses:1,minPoseDetectionConfidence:.4,minPosePresenceConfidence:.4,minTrackingConfidence:.4})}catch(e){console.warn('pose',e)}
-  if(video.requestVideoFrameCallback){rvfc=true;const cb=()=>{trackHands();video.requestVideoFrameCallback(cb)};video.requestVideoFrameCallback(cb)}
-  $('status').textContent='Camera sẵn sàng';setTimeout(()=>$('status').remove(),3000);
- }catch(e){mouse=true;$('mode').hidden=false;const st=$('status');st.classList.add('error');
-  const msg=gotCam?'Không tải được bộ nhận diện tay. Kiểm tra kết nối mạng rồi tải lại.':
-   (e.name==='NotAllowedError'||e.name==='SecurityError')?'Camera bị chặn. Cho phép quyền camera trên thanh địa chỉ rồi tải lại.':
-   (e.name==='NotFoundError'||e.name==='DevicesNotFoundError')?'Không tìm thấy camera. Cắm webcam hoặc kiểm tra kết nối rồi tải lại.':
-   (e.name==='NotReadableError'||e.name==='TrackStartError')?'Camera đang bị ứng dụng khác chiếm. Đóng ứng dụng đó rồi tải lại.':
-   'Không mở được camera. Kiểm tra quyền truy cập rồi tải lại.';
-  st.textContent=msg+' Đang chơi bằng chuột.'}}
-addEventListener('mousemove',e=>{if(!mouse)return;const s=sabers[0],n=new THREE.Vector2(e.clientX,e.clientY),t=performance.now();if(s.on)s.v.copy(n).sub(s.p0).divideScalar(Math.max(.008,(t-s.tt)/1000));s.p0.copy(n);s.tt=t;s.size=60;s.on=true;s.lost=0});
-let lastVT=-1,lastT=0;const V2=THREE.Vector2;
-function trackHands(){
- if(!hl||video.readyState<2||video.currentTime===lastVT)return;lastVT=video.currentTime;
- const T=performance.now(),dt=Math.min(.1,Math.max(.008,(T-lastT)/1000));lastT=T;
+  $('status').textContent='Camera sẵn sàng';setTimeout(()=>{if(!mouse)$('status').textContent=''},3000);
+ }catch(e){useMouse(e)}}
+addEventListener('mousemove',e=>{
+ if(!mouse||state!=='play')return;
+ const s=sabers[0],t=performance.now();
+ if(s.on)s.v.set(e.clientX-s.p0.x,e.clientY-s.p0.y).divideScalar(Math.max(.008,(t-s.tt)/1000));
+ s.p0.set(e.clientX,e.clientY);s.tt=t;s.size=60;s.on=true;
+});
+const V2=THREE.Vector2;
+function trackHands(T){
+ if(!hl||T<nextHandAt||video.readyState<2||video.currentTime===lastVT)return;
+ nextHandAt=Math.max(T+HAND_INTERVAL/2,nextHandAt+HAND_INTERVAL);lastVT=video.currentTime;
+ const dt=Math.min(.1,Math.max(.008,(T-lastT)/1000));lastT=T;
  const hr=hl.detectForVideo(video,T);
- if(pl&&(pc++&1)===0){const P=pl.detectForVideo(video,T).landmarks[0];AR=[];SH=[];SW=160;
+ if(pl&&T>=nextPoseAt){nextPoseAt=Math.max(T+POSE_INTERVAL/2,nextPoseAt+POSE_INTERVAL);const P=pl.detectForVideo(video,T).landmarks[0];AR=[];SH=[];SW=160;
   if(P){for(const i of[11,12,23,24])if((P[i].visibility??1)>.5)SH.push(toScreen(P[i]));if((P[11].visibility??1)>.5&&(P[12].visibility??1)>.5)SW=toScreen(P[11]).distanceTo(toScreen(P[12]));
    for(const[el,wr,ix]of[[13,15,19],[14,16,20]])if((P[el].visibility??1)>.6&&(P[wr].visibility??1)>.6)AR.push({el:toScreen(P[el]),wr:toScreen(P[wr]),ix:toScreen(P[ix])})}}
  const arms=AR.map(a=>({...a,u:false})),shs=SH,sw=SW;
@@ -307,70 +348,169 @@ function step(th,i,t,d){const s=i%16,bar=(i>>4)%4,[r,q]=th.prog[bar];
  if(s%2===0)note(r-24+(s%4===2?12:0),t,d*1.8,'square',.1);
  const ar=[0,q,7,12,7,q,0,7,12,q+12,12,7,q,7,0,7][s];note(r+12+ar,t,d*.9,th.w,th.v);
  const hk=th.hook[bar&1][s];if(hk)note(hk,t,d*1.6,'square',th.v*1.5)}
-function music(n){clearInterval(mt);if(!n||!ac)return;const th=TH[n];st=0;nt=ac.currentTime+.1;
- mt=setInterval(()=>{const d=15/th.bpm;while(nt<ac.currentTime+.15){step(th,st,nt,d);nt+=d;st++}},30)}
+function music(n){clearInterval(mt);mt=null;if(!n||!ac)return;const th=TH[n],d=15/th.bpm;st=0;nt=ac.currentTime+.1;
+ mt=setInterval(()=>{
+  const now=ac.currentTime;
+  if(nt<now){const skipped=Math.ceil((now-nt)/d);st+=skipped;nt+=skipped*d}
+  while(nt<now+.15){step(th,st,nt,d);nt+=d;st++}
+ },30)}
 const sfx=(m,w='sine',d=.15,v=.15)=>ac&&note(m,ac.currentTime,d,w,v);
 function audioOn(){if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)();OUT=ac.createGain();OUT.gain.value=.8;OUT.connect(ac.destination)}ac.resume()}
 
 /* ===== Game ===== */
-let cd=0,state='menu',lvKey='easy',cfg,g=0,objs=[],queue=[],score=0,lives=0,hit=0,total=0,parts=[],last=0,spawned=0;
+const COUNTDOWN=2;
+const GEOMETRIES={
+ book:new THREE.BoxGeometry(.9,1.2,.16),
+ paper:new THREE.PlaneGeometry(.95,1.3),
+ pic:new THREE.PlaneGeometry(.95,1.08)
+};
+let cd=0,state='menu',lvKey='easy',cfg,g=0,objs=[],queue=[],score=0,lives=0,hit=0,targetCount=0,last=null;
+function removeObject(index){
+ const [object]=objs.splice(index,1);
+ S.remove(object.m);
+ object.mats.forEach(material=>material.dispose());
+}
 function start(k){audioOn();lvKey=k;cfg=LV[k];state='play';
- objs.forEach(o=>S.remove(o.m));objs=[];parts.forEach(p=>S.remove(p.m));parts=[];
- const N=ri(...cfg.n),Tn=ri(...cfg.torn),types=[];total=N;
- for(let i=0;i<N;i++)types.push(i<Tn);types.sort(()=>Math.random()-.5);
+ resetSabers();
+ const N=ri(...cfg.n),Tn=ri(...cfg.torn),types=[];targetCount=N-Tn;
+ for(let i=0;i<N;i++)types.push(i<Tn);
+ for(let i=N-1;i>0;i--){const j=ri(0,i);[types[i],types[j]]=[types[j],types[i]]}
  const t0=1.5,span=cfg.dur-t0-cfg.T[1];queue=types.map((tr,i)=>({at:t0+span*(i+Math.random()*.9)/N,torn:tr}));
- score=0;lives=cfg.lives;hit=0;spawned=0;g=-2;
- ['menu','end'].forEach(i=>$(i).classList.remove('on'));$('hud').style.display='flex';$('gl').style.opacity=1;music(cfg.th)}
+ score=0;lives=cfg.lives;hit=0;cd=0;g=-COUNTDOWN;last=performance.now();
+ ['menu','end'].forEach(i=>$(i).classList.remove('on'));$('hud').style.display='flex';$('gl').style.opacity=1;music(cfg.th);scheduleFrame()}
 function spawn(q){const kind=lvKey==='secret'?'pic':Math.random()<.5?'book':'paper',i=ri(0,7),tex=getTex(kind,i,q.torn),tint=q.torn?0xffb0a0:0xffffff;
  const side=Math.random()<.5?-1:1;let m;
- if(kind==='book'){const s=new THREE.MeshBasicMaterial({color:q.torn?0x6b3a30:0xf2f2f2,transparent:true}),f=new THREE.MeshBasicMaterial({map:tex,color:tint,transparent:true});m=new THREE.Mesh(new THREE.BoxGeometry(.9,1.2,.16),[s,s,s,s,f,s])}
- else m=new THREE.Mesh(new THREE.PlaneGeometry(.95,kind==='paper'?1.3:1.08),new THREE.MeshBasicMaterial({map:tex,color:tint,transparent:true,alphaTest:.05,side:THREE.DoubleSide}));
+ let mats;
+ if(kind==='book'){const s=new THREE.MeshBasicMaterial({color:q.torn?0x6b3a30:0xf2f2f2,transparent:true}),f=new THREE.MeshBasicMaterial({map:tex,color:tint,transparent:true});m=new THREE.Mesh(GEOMETRIES.book,[s,s,s,s,f,s]);mats=[s,f]}
+ else{const material=new THREE.MeshBasicMaterial({map:tex,color:tint,transparent:true,alphaTest:.05,side:THREE.DoubleSide});m=new THREE.Mesh(GEOMETRIES[kind],material);mats=[material]}
  const a=new THREE.Vector3(side*rnd(1.5,5),rnd(7,11),-22),b=new THREE.Vector3(side*rnd(.15,Math.max(.2,Math.tan(.5236)*2.8*C.aspect-.95)),rnd(-.5,.4),-2.8);
- m.position.copy(a);S.add(m);objs.push({m,mats:m.material.length?m.material:[m.material],a,b,kind,torn:q.torn,sp:g,T:rnd(...cfg.T),ph:rnd(0,6)});objs[objs.length-1].mats.forEach(x=>x.opacity=.45);spawned++}
+ m.position.copy(a);S.add(m);mats.forEach(material=>material.opacity=.45);
+ objs.push({m,mats,a,b,kind,torn:q.torn,sp:q.at,T:rnd(...cfg.T),ph:rnd(0,6)})}
 function pop(x,y,txt,sub,col){const d=document.createElement('div');d.className='pop';d.style.left=x+'px';d.style.top=y+'px';d.style.setProperty('--tag',col);d.innerHTML='<strong>'+txt+'</strong>'+(sub?'<small>'+sub+'</small>':'');document.body.appendChild(d);setTimeout(()=>d.remove(),1100)}
-const PG=new THREE.SphereGeometry(.02,6,6);
-function burst(p,col,n=30,sp=2){for(let i=0;i<n;i++){const m=new THREE.Mesh(PG,new THREE.MeshBasicMaterial({color:col,transparent:true,blending:THREE.AdditiveBlending}));m.position.copy(p);S.add(m);parts.push({m,v:new THREE.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).multiplyScalar(sp*rnd(.4,1)),l:1})}}
-function loseLife(){lives--;const f=$('flash');f.style.transition='none';f.style.opacity=.45;requestAnimationFrame(()=>{f.style.transition='opacity .4s';f.style.opacity=0});if(lives<=0)finish(false)}
-function segDist(p,a,b){const ab=b.clone().sub(a),t=Math.max(0,Math.min(1,p.clone().sub(a).dot(ab)/(ab.lengthSq()||1)));return p.distanceTo(a.clone().add(ab.multiplyScalar(t)))}
-function finish(win){if(state!=='play')return;state='end';music(null);
- const good=total-objs.length-0,cnt=queue.length;
- const nonTorn=Math.max(1,hitTotal());$('hud').style.display='none';$('gl').style.opacity=0;
- $('et').textContent=win?'Hoàn thành':'Hết lượt';
- $('escore').textContent=score;$('eacc').textContent=Math.round(hit/nonTorn*100)+'%';$('elv').textContent=LVNAME[lvKey]||lvKey;$('estamp').hidden=!win;$('end').classList.add('on');$('retry').focus();
- if(win)sfx(88,'square',.5)}
-let tornTotal=0;const hitTotal=()=>total-tornTotal;
-
-function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000||0);last=now;
- if(!rvfc)trackHands();updateSabers(dt,now);
- if(state==='play'){g+=dt;
-  $('msg').textContent=g<0?(g<-1?'Sẵn sàng…':'Bắt đầu!'):'';
-  while(queue.length&&queue[0].at<=g)spawn(queue.shift());
-  const cand=[];for(const o of [...objs]){const u=(g-o.sp)/o.T;o.m.position.lerpVectors(o.a,o.b,Math.min(u,1.0));o.m.position.y=o.a.y+(o.b.y-o.a.y)*Math.pow(Math.min(u,1),1.8);o.m.rotation.set(Math.sin(g*2+o.ph)*.3,Math.sin(g*1.5+o.ph)*.5,Math.sin(g*3+o.ph)*.4);
-   if(u>=1){S.remove(o.m);objs.splice(objs.indexOf(o),1);if(!o.torn){pop(W/2,H*.62,'Bỏ lỡ','−1 mạng','#B23A30');sfx(120,'sawtooth',.3);loseLife()}continue}
-   const inr=o.T*(1-u)<=REACH;if(inr!==o.inr){o.inr=inr;o.mats.forEach(x=>x.opacity=inr?1:.45)}if(!inr)continue;
-   const v=o.m.position.clone().project(C),sp=new THREE.Vector2((v.x+1)/2*W,(1-v.y)/2*H),r=.6*(H/2)/(Math.tan(C.fov*Math.PI/360)*-o.m.position.z)+14;
-   if(!sabers.some(s=>hitTrail(s,sp,r)))continue;cand.push({o,sp,u});}
-  cd-=dt;if(cd<=0&&cand.length){const{o,sp,u}=cand.reduce((a,b)=>b.u>a.u?b:a);cd=.25;S.remove(o.m);objs.splice(objs.indexOf(o),1);
-   if(o.torn){score+=PEN[o.kind];burst(o.m.position,0xB23A30,70,3.5);sfx(60,'sawtooth',.5,.3);pop(sp.x,sp.y,'Vật rách','−'+Math.abs(PEN[o.kind])+' điểm, −1 mạng','#B23A30');loseLife()}
-   else{const tl=o.T*(1-u),i=tl<=.6?0:tl<=1?1:tl<=1.5?2:3,p=PTS[o.kind][i];score+=p;hit++;
-    burst(o.m.position,new THREE.Color(RT[i][1]),26);sfx(72+i*-3+ri(0,4)*2,'square',.12);pop(sp.x,sp.y,RT[i][0],'+'+p+' điểm, còn '+tl.toFixed(1)+' giây',RT[i][1])}
-  }
-  if(state==='play'&&queue.length===0&&objs.length===0&&g>1)finish(true);
-  $('hs').textContent=score;$('ht').textContent=Math.max(0,Math.ceil(cfg.dur-g))+'s';$('hl').textContent='❤'.repeat(Math.max(0,Math.min(lives,12)))+(lives>12?' ×'+lives:'');
+const MAX_PARTICLES=150,particles=[];
+const particleGeometry=new THREE.BufferGeometry();
+const particlePositions=new THREE.BufferAttribute(new Float32Array(MAX_PARTICLES*3),3).setUsage(THREE.DynamicDrawUsage);
+const particleColors=new THREE.BufferAttribute(new Float32Array(MAX_PARTICLES*3),3).setUsage(THREE.DynamicDrawUsage);
+particleGeometry.setAttribute('position',particlePositions);
+particleGeometry.setAttribute('color',particleColors);
+const particleCanvas=document.createElement('canvas');
+particleCanvas.width=particleCanvas.height=32;
+const particleContext=particleCanvas.getContext('2d');
+const particleGradient=particleContext.createRadialGradient(16,16,0,16,16,16);
+particleGradient.addColorStop(0,'#fff');particleGradient.addColorStop(1,'#fff0');
+particleContext.fillStyle=particleGradient;particleContext.fillRect(0,0,32,32);
+const particleCloud=new THREE.Points(particleGeometry,new THREE.PointsMaterial({
+ size:.05,map:new THREE.CanvasTexture(particleCanvas),vertexColors:true,
+ transparent:true,depthWrite:false,blending:THREE.AdditiveBlending
+}));
+particleCloud.frustumCulled=false;particleCloud.visible=false;S.add(particleCloud);
+function burst(position,color,count,speed=2){
+ const tint=new THREE.Color(color);
+ for(let i=0;i<count&&particles.length<MAX_PARTICLES;i++){
+  const force=speed*rnd(.4,1);
+  particles.push({x:position.x,y:position.y,z:position.z,
+   vx:rnd(-1,1)*force,vy:rnd(-1,1)*force,vz:rnd(-1,1)*force,life:1,tint});
  }
- for(const p of [...parts]){p.l-=dt*1.4;p.m.position.addScaledVector(p.v,dt);p.m.material.opacity=Math.max(0,p.l);if(p.l<=0){S.remove(p.m);parts.splice(parts.indexOf(p),1)}}
- R.render(S,C)}
-// tính số vật rách thực tế: đếm trong start()
-const _start=start;start=function(k){_start(k);tornTotal=queue.filter(q=>q.torn).length};
+}
+function updateParticles(dt){
+ let count=0;
+ for(const p of particles){
+  p.life-=dt*1.4;
+  if(p.life<=0)continue;
+  p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;
+  particlePositions.setXYZ(count,p.x,p.y,p.z);
+  particleColors.setXYZ(count,p.tint.r*p.life,p.tint.g*p.life,p.tint.b*p.life);
+  particles[count++]=p;
+ }
+ particles.length=count;particleCloud.visible=count>0;
+ particleGeometry.setDrawRange(0,count);
+ if(count){particlePositions.needsUpdate=true;particleColors.needsUpdate=true}
+}
+function loseLife(){lives--;const f=$('flash');f.style.transition='none';f.style.opacity=.45;requestAnimationFrame(()=>{f.style.transition='opacity .4s';f.style.opacity=0});if(lives<=0)finish(false)}
+function finish(win){if(state!=='play')return;state='end';music(null);
+ while(objs.length)removeObject(objs.length-1);
+ particles.length=0;particleCloud.visible=false;resetSabers();
+ document.querySelectorAll('.pop').forEach(el=>el.remove());
+ $('hud').style.display='none';$('gl').style.opacity=0;$('msg').textContent='';
+ $('et').textContent=win?'Hoàn thành':'Hết lượt';
+ $('escore').textContent=score;$('eacc').textContent=Math.round(hit/Math.max(1,targetCount)*100)+'%';$('elv').textContent=LVNAME[lvKey]||lvKey;$('estamp').hidden=!win;$('end').classList.add('on');$('retry').focus();
+ if(win)sfx(88,'square',.5)}
+
+const projected=new THREE.Vector3(),screenPoint=new THREE.Vector2();
+const gameMessage=$('msg'),hudScore=$('hs'),hudTime=$('ht'),hudLives=$('hl');
+function setText(element,value){if(element.textContent!==value)element.textContent=value}
+function updateRound(elapsed){
+ g+=elapsed;cd-=elapsed;
+ setText(gameMessage,g<0?(g<-1?'Sẵn sàng…':'Bắt đầu!'):'');
+ while(queue.length&&queue[0].at<=g)spawn(queue.shift());
+ const canSlice=cd<=0&&sabers.some(s=>s.on&&s.trail.length>1);
+ let candidate=null;
+ for(let i=0;i<objs.length;i++){
+  const o=objs[i],u=(g-o.sp)/o.T;
+  if(u>=1){
+   removeObject(i--);
+   if(!o.torn){
+    pop(W/2,H*.62,'Bỏ lỡ','−1 mạng','#B23A30');sfx(120,'sawtooth',.3);loseLife();
+    if(state!=='play')return;
+   }
+   continue;
+  }
+  o.m.position.lerpVectors(o.a,o.b,u);
+  o.m.position.y=o.a.y+(o.b.y-o.a.y)*u**1.8;
+  o.m.rotation.set(Math.sin(g*2+o.ph)*.3,Math.sin(g*1.5+o.ph)*.5,Math.sin(g*3+o.ph)*.4);
+  const remaining=o.T*(1-u),inRange=remaining<=REACH;
+  if(inRange!==o.inr){o.inr=inRange;o.mats.forEach(material=>material.opacity=inRange?1:.45)}
+  if(!inRange||!canSlice||(candidate&&u<=candidate.progress))continue;
+  projected.copy(o.m.position).project(C);
+  screenPoint.set((projected.x+1)/2*W,(1-projected.y)/2*H);
+  const radius=.6*(H/2)/(Math.tan(C.fov*Math.PI/360)*-o.m.position.z)+14;
+  if(sabers.some(s=>hitTrail(s,screenPoint,radius)))candidate={object:o,progress:u,x:screenPoint.x,y:screenPoint.y,remaining};
+ }
+ if(candidate){
+  const {object:o,x,y,remaining}=candidate;
+  cd=.25;removeObject(objs.indexOf(o));
+  if(o.torn){
+   score+=PEN[o.kind];burst(o.m.position,0xB23A30,70,3.5);sfx(60,'sawtooth',.5,.3);
+   pop(x,y,'Vật rách','−'+Math.abs(PEN[o.kind])+' điểm, −1 mạng','#B23A30');loseLife();
+   if(state!=='play')return;
+  }else{
+   const i=remaining<=.6?0:remaining<=1?1:remaining<=1.5?2:3,p=PTS[o.kind][i];
+   score+=p;hit++;
+   burst(o.m.position,RT[i][1],26);sfx(72-i*3+ri(0,4)*2,'square',.12);
+   pop(x,y,RT[i][0],'+'+p+' điểm, còn '+remaining.toFixed(1)+' giây',RT[i][1]);
+  }
+ }
+ setText(hudScore,String(score));
+ setText(hudTime,Math.min(cfg.dur,Math.max(0,Math.ceil(cfg.dur-g)))+'s');
+ setText(hudLives,'❤'.repeat(Math.max(0,Math.min(lives,12)))+(lives>12?' ×'+lives:''));
+ if(g>=cfg.dur)finish(true);
+}
+function frame(now){
+ frameId=0;
+ if(document.hidden)return;
+ if(state==='play'){
+  const elapsed=last===null?0:Math.max(0,(now-last)/1000),dt=Math.min(.05,elapsed);last=now;
+  try{trackHands(now)}catch(error){useMouse(error)}
+  updateSabers(dt,now);
+  updateRound(elapsed);
+  updateParticles(dt);
+  if(state==='play')scheduleFrame();
+ }
+ R.render(S,C);
+}
+document.addEventListener('visibilitychange',()=>{
+ last=null;
+ if(document.hidden)resetSabers();else scheduleFrame();
+});
 
 /* ===== UI ===== */
 document.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>start(b.dataset.lv));
 $('retry').onclick=()=>start(lvKey);
-$('home').onclick=()=>{state='menu';$('end').classList.remove('on');$('menu').classList.add('on');$('hud').style.display='none';objs.forEach(o=>S.remove(o.m));objs=[];audioOn();music('menu');document.querySelector('.level').focus()};
+$('home').onclick=()=>{state='menu';$('end').classList.remove('on');$('menu').classList.add('on');$('hud').style.display='none';audioOn();music('menu');document.querySelector('.level').focus()};
 addEventListener('pointerdown',()=>{audioOn();if(state==='menu'&&!mt)music('menu')},{once:false});
 let buf='';addEventListener('keydown',e=>{if(state!=='menu'||e.key.length!==1)return;audioOn();buf=(buf+e.key.toLowerCase()).slice(-8);
  if(buf.length===8&&btoa(buf)===SECRET_B64){$('secret').style.display='block';sfx(84,'square',.4)}});
 $('ppl').onchange=e=>{PEOPLE_IMAGES=[...e.target.files].map(f=>URL.createObjectURL(f));Object.keys(cache).filter(k=>k.startsWith('pic')).forEach(k=>delete cache[k])};
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
-initTracking();requestAnimationFrame(frame);
+initTracking();
 </script></body></html>
