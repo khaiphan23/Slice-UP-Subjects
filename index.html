@@ -21,9 +21,10 @@ h1.title{font-family:var(--serif);font-weight:700;font-size:var(--fs-display);li
 .subtitle{font-family:var(--serif);font-style:italic;font-size:1rem;color:var(--moss);margin:10px 0 0}
 .intro{font-size:var(--fs-body);line-height:1.55;margin:18px 0 14px;max-width:56ch}
 .choose{font-size:var(--fs-small);font-weight:600;color:var(--moss);margin:0 0 6px}
+.short-tip{display:none}
 .levels{display:flex;flex-direction:column;border-top:1px solid rgba(38,48,43,.25)}
 .level{display:grid;grid-template-columns:2.2rem minmax(0,1fr) auto;gap:2px 14px;align-items:center;width:100%;margin:0;padding:12px 6px;border:0;border-bottom:1px solid rgba(38,48,43,.18);border-radius:0;background:transparent;color:var(--graphite);font-family:var(--sans);text-align:left;cursor:pointer;transition:background .15s}
-.level:hover{background:rgba(178,58,48,.07)}
+.level:hover{background:rgba(178,58,48,.07);color:var(--graphite)}
 .level .num{font-family:var(--serif);font-size:1.05rem;font-weight:600;color:var(--red);font-variant-numeric:tabular-nums}
 .level strong{display:block;font-family:var(--serif);font-size:1.3rem;font-weight:600;line-height:1.15}
 .level small{display:block;font-size:var(--fs-small);color:var(--moss);margin-top:2px}
@@ -46,7 +47,7 @@ button.primary:hover{background:#963027;border-color:#963027;color:var(--paper)}
 #secret button:hover{background:var(--red);color:var(--paper)}
 #secret label{display:block;font-size:var(--fs-small);color:var(--moss)}
 #secret input{display:block;max-width:100%;margin-top:6px;font:inherit;font-size:.78rem}
-#hud{position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:none;align-items:stretch;background:rgba(16,24,21,.84);border:1px solid rgba(243,236,217,.18);border-radius:3px;z-index:4;color:var(--paper);font-family:var(--sans);pointer-events:none;font-variant-numeric:tabular-nums}
+#hud{position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:none;align-items:stretch;background:rgba(16,24,21,.9);border:1px solid rgba(243,236,217,.18);border-radius:3px;z-index:4;color:var(--paper);font-family:var(--sans);pointer-events:none;font-variant-numeric:tabular-nums}
 #hud .hud-item{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 18px;min-width:92px}
 #hud .hud-item+.hud-item{border-left:1px solid rgba(243,236,217,.16)}
 #hud .hud-label{font-size:10px;line-height:1.2;color:var(--chalk)}
@@ -74,10 +75,10 @@ button.primary:hover{background:#963027;border-color:#963027;color:var(--paper)}
 :focus-visible{outline:3px solid var(--red);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 @media (max-width:560px){.screen{padding:12px}.sheet{padding:22px 18px}.level{grid-template-columns:2rem minmax(0,1fr)}.level .meta{grid-column:2;text-align:left;display:flex;gap:12px;margin-top:3px}.level .meta span{display:inline}.result-grid{grid-template-columns:1fr;gap:10px}.actions button{flex:1 1 160px}}
-@media (max-height:560px){.screen{padding:8px}.sheet{margin:0 auto;padding:14px 20px}.kicker{display:none}.title{font-size:clamp(1.8rem,6vw,2.5rem)}.subtitle{margin-top:4px;font-size:.9rem}.intro{margin:8px 0 10px;font-size:.85rem;line-height:1.35}.choose{margin-bottom:2px}.level{padding:7px 4px}.level strong{font-size:1.1rem}.level small{font-size:.75rem}.guide{margin-top:8px}.guide summary{padding:7px 0}.result-grid{margin:12px 0;padding:10px 0}.result h1{font-size:1.35rem}}
+@media (max-height:560px){.screen{padding:8px}.sheet{margin:0 auto;padding:12px 18px}#end .sheet{margin:auto}.kicker{display:none}.title{font-size:clamp(1.7rem,5.5vw,2.2rem)}.pen-line{height:.24em}.subtitle{margin-top:2px;font-size:.82rem}.intro{display:none}.short-tip{display:inline}#status{margin:7px 0;padding:6px 8px;font-size:11px}.choose{margin:0 0 3px;font-size:.76rem}.level{padding:5px 4px}.level strong{font-size:1.05rem}.level small{font-size:.72rem}.guide{margin-top:4px}.guide summary{padding:6px 0}.result-grid{margin:12px 0;padding:10px 0}.result h1{font-size:1.35rem}}
 </style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet"></head><body>
 <video id="cam" playsinline muted></video><div id="gl"></div><div id="flash"></div>
-<div id="hud" aria-label="Thông tin ván chơi">
+<div id="hud" role="group" aria-label="Thông tin ván chơi">
   <div class="hud-item"><span class="hud-label">Điểm</span><span class="hud-value" id="hs">0</span></div>
   <div class="hud-item"><span class="hud-label">Thời gian</span><span class="hud-value" id="ht">0s</span></div>
   <div class="hud-item"><span class="hud-label">Mạng</span><span class="hud-value" id="hl"></span></div>
@@ -92,7 +93,7 @@ button.primary:hover{background:#963027;border-color:#963027;color:var(--paper)}
     <p class="subtitle">Trò chơi phản xạ với camera</p>
     <p class="intro">Vung tay thật nhanh để chém vật sáng. Đứng yên thì không chém được. Vật rách sẽ trừ điểm và mất một mạng. Không có camera? Chơi bằng chuột.</p>
     <div id="status" role="status">Đang khởi động camera…</div>
-    <p class="choose">Chọn độ khó để bắt đầu.</p>
+    <p class="choose"><span class="short-tip">Vung tay thật nhanh khi vật sáng. </span>Chọn độ khó để bắt đầu.</p>
     <div class="levels" role="group" aria-label="Chọn độ khó">
       <button class="level" data-lv="easy" aria-label="Chơi mức Dễ, 1 phút, 10 mạng">
         <span class="num">01</span>
@@ -113,7 +114,7 @@ button.primary:hover{background:#963027;border-color:#963027;color:var(--paper)}
     <details class="guide">
       <summary>Cách tính điểm</summary>
       <div class="guide-body">
-        <p>Chỉ chém được khi vật sáng rõ. Chém càng nhanh, điểm càng cao:</p>
+        <p>Chỉ chém được khi vật sáng rõ. Đứng yên thì không chém được. Chém càng nhanh, điểm càng cao:</p>
         <ul class="score-list">
           <li><strong>Xuất sắc</strong> dưới 0,6 giây</li>
           <li><strong>Tốt</strong> từ 0,6 đến 1 giây</li>
@@ -319,7 +320,7 @@ function start(k){audioOn();lvKey=k;cfg=LV[k];state='play';
  for(let i=0;i<N;i++)types.push(i<Tn);types.sort(()=>Math.random()-.5);
  const t0=1.5,span=cfg.dur-t0-cfg.T[1];queue=types.map((tr,i)=>({at:t0+span*(i+Math.random()*.9)/N,torn:tr}));
  score=0;lives=cfg.lives;hit=0;spawned=0;g=-2;
- ['menu','end'].forEach(i=>$(i).classList.remove('on'));$('hud').style.display='flex';music(cfg.th)}
+ ['menu','end'].forEach(i=>$(i).classList.remove('on'));$('hud').style.display='flex';$('gl').style.opacity=1;music(cfg.th)}
 function spawn(q){const kind=lvKey==='secret'?'pic':Math.random()<.5?'book':'paper',i=ri(0,7),tex=getTex(kind,i,q.torn),tint=q.torn?0xffb0a0:0xffffff;
  const side=Math.random()<.5?-1:1;let m;
  if(kind==='book'){const s=new THREE.MeshBasicMaterial({color:q.torn?0x6b3a30:0xf2f2f2,transparent:true}),f=new THREE.MeshBasicMaterial({map:tex,color:tint,transparent:true});m=new THREE.Mesh(new THREE.BoxGeometry(.9,1.2,.16),[s,s,s,s,f,s])}
@@ -333,9 +334,9 @@ function loseLife(){lives--;const f=$('flash');f.style.transition='none';f.style
 function segDist(p,a,b){const ab=b.clone().sub(a),t=Math.max(0,Math.min(1,p.clone().sub(a).dot(ab)/(ab.lengthSq()||1)));return p.distanceTo(a.clone().add(ab.multiplyScalar(t)))}
 function finish(win){if(state!=='play')return;state='end';music(null);
  const good=total-objs.length-0,cnt=queue.length;
- const nonTorn=Math.max(1,hitTotal());$('hud').style.display='none';
+ const nonTorn=Math.max(1,hitTotal());$('hud').style.display='none';$('gl').style.opacity=0;
  $('et').textContent=win?'Hoàn thành':'Hết lượt';
- $('escore').textContent=score;$('eacc').textContent=Math.round(hit/nonTorn*100)+'%';$('elv').textContent=LVNAME[lvKey]||lvKey;$('estamp').hidden=!win;$('end').classList.add('on');
+ $('escore').textContent=score;$('eacc').textContent=Math.round(hit/nonTorn*100)+'%';$('elv').textContent=LVNAME[lvKey]||lvKey;$('estamp').hidden=!win;$('end').classList.add('on');$('retry').focus();
  if(win)sfx(88,'square',.5)}
 let tornTotal=0;const hitTotal=()=>total-tornTotal;
 
@@ -365,7 +366,7 @@ const _start=start;start=function(k){_start(k);tornTotal=queue.filter(q=>q.torn)
 /* ===== UI ===== */
 document.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>start(b.dataset.lv));
 $('retry').onclick=()=>start(lvKey);
-$('home').onclick=()=>{state='menu';$('end').classList.remove('on');$('menu').classList.add('on');$('hud').style.display='none';objs.forEach(o=>S.remove(o.m));objs=[];audioOn();music('menu')};
+$('home').onclick=()=>{state='menu';$('end').classList.remove('on');$('menu').classList.add('on');$('hud').style.display='none';objs.forEach(o=>S.remove(o.m));objs=[];audioOn();music('menu');document.querySelector('.level').focus()};
 addEventListener('pointerdown',()=>{audioOn();if(state==='menu'&&!mt)music('menu')},{once:false});
 let buf='';addEventListener('keydown',e=>{if(state!=='menu'||e.key.length!==1)return;audioOn();buf=(buf+e.key.toLowerCase()).slice(-8);
  if(buf.length===8&&btoa(buf)===SECRET_B64){$('secret').style.display='block';sfx(84,'square',.4)}});
